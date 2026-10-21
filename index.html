@@ -7,7 +7,7 @@ const scene=new T.Scene();
 const externalAssets=new T.Group();scene.add(externalAssets);
 const gltfLoader=new GLTFLoader();
 const assetQueue=[];let assetPumpActive=false;
-const SKIN_BASE='https://hidencod.github.io/tge-assets/packs/blocky-characters/';
+const SKIN_BASE='./assets/characters/';
 const skinFiles='abcdefghijklmnopqr'.split('').map(c=>'character-'+c+'.glb');
 const skinCache=new Map(),skinPending=new Map();
 function getSkin(file,done){
