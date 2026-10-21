@@ -6,6 +6,7 @@ import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/
 const scene=new T.Scene();
 const externalAssets=new T.Group();scene.add(externalAssets);
 const gltfLoader=new GLTFLoader();
+const assetQueue=[];let assetPumpActive=false;
 let externalLoaded=0,externalFailed=0;
 const EXTERNAL_TOTAL=8;
 let fallbackAisles=null,fallbackCheckout=null,fallbackCold=null,qualityTier='HIGH',measuredFPS=30;
@@ -13,16 +14,20 @@ function prepExternal(root){
  root.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;if(o.material){o.material.roughness=Math.min(1,(o.material.roughness??.75)+.08);o.material.needsUpdate=true}}});
  return root;
 }
-function loadExternal(url,placements,label){
- gltfLoader.load(url,gltf=>{
+function loadExternal(url,placements,label){assetQueue.push({url,placements,label})}
+function pumpAssets(){
+ if(assetPumpActive||!assetQueue.length)return;
+ assetPumpActive=true;const job=assetQueue.shift();
+ gltfLoader.load(job.url,gltf=>{
    const base=prepExternal(gltf.scene);
-   placements.forEach((p,i)=>{const root=i===0?base:base.clone(true);root.position.set(p[0],p[1]||0,p[2]);root.rotation.y=p[3]||0;const sc=p[4]||1;root.scale.setScalar(sc);externalAssets.add(root)});
+   job.placements.forEach((p,i)=>{const root=i===0?base:base.clone(true);root.position.set(p[0],p[1]||0,p[2]);root.rotation.y=p[3]||0;const sc=p[4]||1;root.scale.setScalar(sc);externalAssets.add(root)});
    externalLoaded++;
-   if(label==='stocked grocery aisles'&&fallbackAisles)fallbackAisles.visible=false;
-   if((label==='checkout service'||label==='self checkout bank')&&fallbackCheckout)fallbackCheckout.visible=false;
-   if((label==='open chillers'||label==='chest freezers'||label==='cold-chain stockroom')&&fallbackCold)fallbackCold.visible=false;
+   if(job.label==='stocked grocery aisles'&&fallbackAisles)fallbackAisles.visible=false;
+   if((job.label==='checkout service'||job.label==='self checkout bank')&&fallbackCheckout)fallbackCheckout.visible=false;
+   if((job.label==='open chillers'||job.label==='chest freezers'||job.label==='cold-chain stockroom')&&fallbackCold)fallbackCold.visible=false;
    const el=document.querySelector('#loading');if(el)el.textContent='Assets 3D cargados: '+externalLoaded+'/'+EXTERNAL_TOTAL;
- },undefined,err=>{externalFailed++;console.warn('Asset externo falló',label,err);const el=document.querySelector('#loading');if(el)el.textContent='Cargando escena… '+externalLoaded+' listos, '+externalFailed+' en respaldo'});
+   assetPumpActive=false;setTimeout(pumpAssets,90);
+ },undefined,err=>{externalFailed++;console.warn('Asset externo falló',job.label,err);assetPumpActive=false;setTimeout(pumpAssets,120)});
 }scene.background=new T.Color(0x080f1b);scene.fog=new T.FogExp2(0x080f1b,.023);const camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.1,100);const renderer=new T.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.shadowMap.enabled=false;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;document.body.prepend(renderer.domElement);const hemi=new T.HemisphereLight(0xa8caff,0x343c59,1.6);scene.add(hemi);const lights=[];
 const material=(c,r=.8,m=0)=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m});
 function proceduralTexture(kind){
@@ -136,11 +141,11 @@ return {g,headless,larm,rarm,lleg,rleg,torso,shadow,state:'enter',target:new T.V
 const phantom=character(0x29213c,true);phantom.g.scale.set(1.18,1.3,1.18);phantom.g.position.set(8,0,-15);phantom.g.visible=false;
 const phantomGlow=new T.PointLight(0xff225b,0,8);phantom.g.add(phantomGlow);
 let phantomActive=false,phantomTimer=0,phantomCooldown=900,escapeCount=0;
-function paranormalAI(){if(!phantomActive){phantomCooldown--;if(phantomCooldown<=0){phantomActive=true;phantomTimer=0;phantom.g.visible=true;phantom.g.position.set(8,0,-15);phantomGlow.intensity=18;scareSound();say('⚠️ ENTIDAD DETECTADA','¡Algo salió del almacén! La IA intentará escapar.');heroTarget.set(0,0,14);mode='escape';}return}
+function paranormalAI(){if(!phantomActive){phantomCooldown--;if(phantomCooldown<=0){phantomActive=true;phantomTimer=0;phantom.g.visible=true;phantom.g.position.set(8,0,-15);phantomGlow.intensity=18;scareSound();say('⚠️ ENTIDAD DETECTADA','¡Algo salió del almacén! La IA intentará escapar.');setHeroDestination(0,14);mode='escape';}return}
 phantomTimer++;phantom.target.copy(hero.g.position);phantom.speed=.038+Math.min(night*.001,.014);move(phantom);
 let distance=phantom.g.position.distanceTo(hero.g.position);
 if(distance<1.65&&frame%50===0){hp=Math.max(10,hp-8);shock=frame+10;say('⚠️ PERSECUCIÓN','La criatura está demasiado cerca. ¡Corre!')}
-if(phantomTimer>430||distance>19){phantomActive=false;phantom.g.visible=false;phantomGlow.intensity=0;phantomCooldown=850+Math.floor(Math.random()*500);escapeCount++;cash+=90;hp=Math.min(100,hp+12);mode='patrol';heroTarget.set(-6,0,9);say('🏃 ESCAPASTE','La entidad desapareció. Recompensa: $90. Escapes: '+escapeCount)}}
+if(phantomTimer>430||distance>19){phantomActive=false;phantom.g.visible=false;phantomGlow.intensity=0;phantomCooldown=850+Math.floor(Math.random()*500);escapeCount++;cash+=90;hp=Math.min(100,hp+12);mode='patrol';setHeroDestination(-6,9);say('🏃 ESCAPASTE','La entidad desapareció. Recompensa: $90. Escapes: '+escapeCount)}}
 const hero=character(0x5f9dd8,false,true);
 // Player accessories make the AI-controlled character recognizable on camera
 box(hero.g,.9,.85,.24,m.black,0,1.43,-.36);
@@ -161,6 +166,23 @@ const backpack=box(hero.g,.75,.85,.3,m.red,0,1.5,-.4);
 box(hero.g,.18,.85,.12,m.black,-.52,1.6,-.28);box(hero.g,.18,.85,.12,m.black,.52,1.6,-.28);
 const torch=new T.SpotLight(0xfff2cf,45,16,Math.PI/7,.5,1.7);torch.position.set(0,2.1,.45);torch.target.position.set(0,1,6);hero.g.add(torch);hero.g.add(torch.target);
 hero.g.position.set(-6,0,8);const cashier=character(0xe7b04b,false,true);cashier.g.position.set(-6,0,12);cashier.g.rotation.y=Math.PI;const guard=character(0x6277a7,false,true);guard.g.position.set(8,0,13);let clients=[],cash=250,night=1,level=1,served=0,goal=8,frame=0,hp=100,mission=0,mode='stock',heroTarget=new T.Vector3(-6,0,-7),dialogEnd=0,blackout=0,shock=0,started=false,clock=0;
+const navNodes=[
+ new T.Vector3(-9,0,14),new T.Vector3(-4,0,14),new T.Vector3(1,0,14),new T.Vector3(6,0,14),
+ new T.Vector3(-9,0,6),new T.Vector3(-4,0,6),new T.Vector3(1,0,6),new T.Vector3(6,0,6),
+ new T.Vector3(-9,0,-1),new T.Vector3(-4,0,-1),new T.Vector3(1,0,-1),new T.Vector3(6,0,-1),
+ new T.Vector3(-9,0,-8),new T.Vector3(-4,0,-8),new T.Vector3(1,0,-8),new T.Vector3(6,0,-8),
+ new T.Vector3(-9,0,-14),new T.Vector3(-4,0,-14),new T.Vector3(1,0,-14),new T.Vector3(6,0,-14)
+];
+let heroRoute=[],routeIndex=0;
+function nearestNav(v){let best=navNodes[0],bd=1e9;for(const n of navNodes){const d=Math.hypot(v.x-n.x,v.z-n.z);if(d<bd){bd=d;best=n}}return best}
+function buildRoute(from,to){
+ const start=nearestNav(from),end=nearestNav(to),route=[];
+ if(Math.abs(start.z-end.z)>1){route.push(start.clone());route.push(new T.Vector3(start.x,0,end.z))}
+ route.push(end.clone());route.push(to.clone());
+ return route;
+}
+function setHeroDestination(x,z){const final=new T.Vector3(x,0,z);heroRoute=buildRoute(hero.g.position,final);routeIndex=0;heroTarget.copy(heroRoute[0]||final)}
+function advanceHeroRoute(){if(!heroRoute.length)return false;if(hero.g.position.distanceTo(heroTarget)<.24){routeIndex++;if(routeIndex<heroRoute.length){heroTarget.copy(heroRoute[routeIndex]);return true}else{heroRoute=[];return false}}return true}
 let audioCtx=null,masterGain=null,lastFoot=0;
 function initAudio(){if(audioCtx)return;audioCtx=new (window.AudioContext||window.webkitAudioContext)();masterGain=audioCtx.createGain();masterGain.gain.value=.18;masterGain.connect(audioCtx.destination);const hum=audioCtx.createOscillator(),hg=audioCtx.createGain();hum.type='sine';hum.frequency.value=54;hg.gain.value=.025;hum.connect(hg);hg.connect(masterGain);hum.start()}
 function tone(freq=440,duration=.08,type='square',gain=.08){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(gain,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.connect(g);g.connect(masterGain);o.start();o.stop(audioCtx.currentTime+duration)}
@@ -197,13 +219,13 @@ else if(mode==='stock')action.textContent='📦 IA: REPONIENDO PRODUCTOS • '+s
 else if(mode==='cash')action.textContent='🧾 IA: COBRANDO CLIENTES • '+scanned;
 else if(mode==='investigate')action.textContent='🔦 IA: INVESTIGANDO RUIDOS';
 else action.textContent='👀 IA: PATRULLANDO EL SUPERMERCADO';
-if(move(hero)){clock++;
+if(move(hero)){if(advanceHeroRoute())return;clock++;
 if(clock>70){clock=0;decisions++;
-if(mode==='escape'){heroTarget.set(0,0,14)}
-else if(mode==='stock'){stocked+=3+Math.floor(Math.random()*4);cash+=8;mode='cash';heroTarget.set(-6,0,9);say('PROTAGONISTA • IA','Listo. Reposición terminada. Voy a caja.')}
-else if(mode==='cash'){let waiting=clients.filter(c=>c.state==='checkout').length;if(waiting>0){heroTarget.set(-6,0,9);say('PROTAGONISTA • IA','Hay '+waiting+' clientes esperando. Sigo cobrando.')}else{mode='investigate';heroTarget.set(8,0,-14);say('PROTAGONISTA • IA','Caja despejada. Escuché golpes en el almacén.')}}
-else if(mode==='investigate'){mode='patrol';heroTarget.set(7,0,8);say('PROTAGONISTA • IA','La puerta estaba cerrada... pero había pasos adentro.')}
-else{mode='stock';heroTarget.set([-7,-2,3][Math.floor(Math.random()*3)],0,-10+Math.random()*12);say('PROTAGONISTA • IA','Inventario bajo. Voy a reponer otro pasillo.')}}}
+if(mode==='escape'){setHeroDestination(0,14)}
+else if(mode==='stock'){stocked+=3+Math.floor(Math.random()*4);cash+=8;mode='cash';setHeroDestination(-6,9);say('PROTAGONISTA • IA','Listo. Reposición terminada. Voy a caja.')}
+else if(mode==='cash'){let waiting=clients.filter(c=>c.state==='checkout').length;if(waiting>0){setHeroDestination(-6,9);say('PROTAGONISTA • IA','Hay '+waiting+' clientes esperando. Sigo cobrando.')}else{mode='investigate';setHeroDestination(8,-14);say('PROTAGONISTA • IA','Caja despejada. Escuché golpes en el almacén.')}}
+else if(mode==='investigate'){mode='patrol';setHeroDestination(7,8);say('PROTAGONISTA • IA','La puerta estaba cerrada... pero había pasos adentro.')}
+else{mode='stock';setHeroDestination([-7,-2,3][Math.floor(Math.random()*3)],-10+Math.random()*12);say('PROTAGONISTA • IA','Inventario bajo. Voy a reponer otro pasillo.')}}}
 hero.target.copy(heroTarget);
 const anim=Math.sin(frame*.18);
 if(mode==='stock'){hero.larm.rotation.x=-.72+anim*.16;hero.rarm.rotation.x=-.72-anim*.16;hero.torso.rotation.x=-.04;heroCrate.rotation.y=anim*.025}
@@ -215,7 +237,7 @@ const nearDoor=hero.g.position.distanceTo(new T.Vector3(8.7,0,-16.3))<4.2&&mode=
 redDoor.rotation.y+=((nearDoor?-.72:0)-redDoor.rotation.y)*.07;
 const moving=hero.g.position.distanceTo(hero.target)>.2;
 let walk=Math.sin(frame*.22)*(moving?.035:0);hero.g.position.y=walk;hero.g.rotation.z=Math.sin(frame*.11)*.008;
-if(moving&&frame-lastFoot>13){lastFoot=frame;footstep()}}function update(){frame++;window.__GAME_DIAG__={started,frame,cash,night,level,served,hp,mode,clients:clients.length,phantomActive,externalLoaded,externalFailed,qualityTier,measuredFPS};if(frame%150===0&&clients.length<9)spawn();if(frame%900===0){for(let i=0;i<Math.min(3,level);i++)spawn()}clients.forEach(updateClient);clients=clients.filter(p=>!p.done);heroAI();paranormalAI();atmosphere();animateCheckout();guard.g.rotation.y=Math.sin(frame*.01)*.8;cashier.larm.rotation.x=Math.sin(frame*.05)*.2;if(frame%350===0){eventCount++;haunt=Math.min(100,haunt+3);if(eventCount%3===0){chapter++;let next=storyMissions[(chapter-1)%storyMissions.length];document.querySelector('#objective').textContent=next;say('CAPÍTULO '+chapter+' • '+chapterNames[(chapter-1)%chapterNames.length],next)}if(eventCount%4===0&&!phantomActive){heroTarget.set(8,0,-16);mode='investigate';say('PROTAGONISTA • IA','Voy a revisar la puerta roja. Algo se mueve detrás.')}if(eventCount%5===0){cash+=150;secretFound++;say('OBJETO MISTERIOSO','Encontraste la pista secreta número '+secretFound+'.')}if(eventCount%7===0){hp=Math.max(35,hp-12);shock=frame+14;say('⚠️ AMENAZA','Una sombra te alcanzó. ¡Sigue moviéndote!')}if(eventCount%8===0){hp=Math.min(100,hp+22);say('BOTIQUÍN','Recuperaste energía en la sala de empleados.')}}if(frame%520===0){let pool=dialogues.concat(dialogueExtra);let [a,b]=pool[Math.floor(Math.random()*pool.length)];say(a,b);if(Math.random()<.48)blackout=frame+125;if(Math.random()<.2)shock=frame+18}if(frame%1900===0){night++;cash+=100*night;say('SISTEMA','Noche '+night+'. El supermercado exige otro turno.')}if(served>=goal){level++;goal+=8+level*3;cash+=220;say('SISTEMA','Misión cumplida. Nueva meta: '+goal+' clientes.')}if(frame<blackout){lights.forEach((l,i)=>l.intensity=i%3===0?1:0);hemi.intensity=.17}else{lights.forEach((l,i)=>l.intensity=i%3===0?8:13);hemi.intensity=1.6}document.querySelector('#cash').textContent='💵 $'+cash;document.querySelector('#round').textContent='🌘 Noche '+night;document.querySelector('#lvl').textContent='⭐ Nivel '+level;if(chapter===1)document.querySelector('#objective').textContent='Atiende '+goal+' clientes';document.querySelector('#progress').textContent=served+' / '+goal+' ventas • 📦 '+stocked+' repuestos • 👁️ '+haunt+'% paranormal • 🏃 '+escapeCount+' escapes';document.querySelector('#hp').textContent=hp;document.querySelector('#fill').style.width=hp+'%';document.querySelector('#dialog').classList.toggle('on',frame<dialogEnd);document.querySelector('#flash').style.opacity=frame<shock?.22:0;const facing=new T.Vector3(Math.sin(hero.g.rotation.y),0,Math.cos(hero.g.rotation.y));let desired=hero.g.position.clone().addScaledVector(facing,-5.3).add(new T.Vector3(0,3.3,0));camera.position.lerp(desired,phantomActive?.105:.075);const targetFov=phantomActive?76:67;if(Math.abs(camera.fov-targetFov)>.1){camera.fov+=(targetFov-camera.fov)*.08;camera.updateProjectionMatrix()}if(hero.g.position.distanceTo(hero.target)>.3){camera.position.y+=Math.sin(frame*.24)*.018;camera.position.x+=Math.sin(frame*.12)*.012}let look=hero.g.position.clone().addScaledVector(facing,4.4).add(new T.Vector3(0,1.65,0));camera.lookAt(look);renderer.render(scene,camera)}let last=0,perfStart=0,perfFrames=0;
+if(moving&&frame-lastFoot>13){lastFoot=frame;footstep()}}function update(){frame++;window.__GAME_DIAG__={started,frame,cash,night,level,served,hp,mode,clients:clients.length,phantomActive,externalLoaded,externalFailed,qualityTier,measuredFPS};if(frame%150===0&&clients.length<9)spawn();if(frame%900===0){for(let i=0;i<Math.min(3,level);i++)spawn()}clients.forEach(updateClient);clients=clients.filter(p=>!p.done);heroAI();paranormalAI();atmosphere();animateCheckout();guard.g.rotation.y=Math.sin(frame*.01)*.8;cashier.larm.rotation.x=Math.sin(frame*.05)*.2;if(frame%350===0){eventCount++;haunt=Math.min(100,haunt+3);if(eventCount%3===0){chapter++;let next=storyMissions[(chapter-1)%storyMissions.length];document.querySelector('#objective').textContent=next;say('CAPÍTULO '+chapter+' • '+chapterNames[(chapter-1)%chapterNames.length],next)}if(eventCount%4===0&&!phantomActive){setHeroDestination(8,-16);mode='investigate';say('PROTAGONISTA • IA','Voy a revisar la puerta roja. Algo se mueve detrás.')}if(eventCount%5===0){cash+=150;secretFound++;say('OBJETO MISTERIOSO','Encontraste la pista secreta número '+secretFound+'.')}if(eventCount%7===0){hp=Math.max(35,hp-12);shock=frame+14;say('⚠️ AMENAZA','Una sombra te alcanzó. ¡Sigue moviéndote!')}if(eventCount%8===0){hp=Math.min(100,hp+22);say('BOTIQUÍN','Recuperaste energía en la sala de empleados.')}}if(frame%520===0){let pool=dialogues.concat(dialogueExtra);let [a,b]=pool[Math.floor(Math.random()*pool.length)];say(a,b);if(Math.random()<.48)blackout=frame+125;if(Math.random()<.2)shock=frame+18}if(frame%1900===0){night++;cash+=100*night;say('SISTEMA','Noche '+night+'. El supermercado exige otro turno.')}if(served>=goal){level++;goal+=8+level*3;cash+=220;say('SISTEMA','Misión cumplida. Nueva meta: '+goal+' clientes.')}if(frame<blackout){lights.forEach((l,i)=>l.intensity=i%3===0?1:0);hemi.intensity=.17}else{lights.forEach((l,i)=>l.intensity=i%3===0?8:13);hemi.intensity=1.6}document.querySelector('#cash').textContent='💵 $'+cash;document.querySelector('#round').textContent='🌘 Noche '+night;document.querySelector('#lvl').textContent='⭐ Nivel '+level;if(chapter===1)document.querySelector('#objective').textContent='Atiende '+goal+' clientes';document.querySelector('#progress').textContent=served+' / '+goal+' ventas • 📦 '+stocked+' repuestos • 👁️ '+haunt+'% paranormal • 🏃 '+escapeCount+' escapes';document.querySelector('#hp').textContent=hp;document.querySelector('#fill').style.width=hp+'%';document.querySelector('#dialog').classList.toggle('on',frame<dialogEnd);document.querySelector('#flash').style.opacity=frame<shock?.22:0;const facing=new T.Vector3(Math.sin(hero.g.rotation.y),0,Math.cos(hero.g.rotation.y));let desired=hero.g.position.clone().addScaledVector(facing,-5.3).add(new T.Vector3(0,3.3,0));camera.position.lerp(desired,phantomActive?.105:.075);const targetFov=phantomActive?76:67;if(Math.abs(camera.fov-targetFov)>.1){camera.fov+=(targetFov-camera.fov)*.08;camera.updateProjectionMatrix()}if(hero.g.position.distanceTo(hero.target)>.3){camera.position.y+=Math.sin(frame*.24)*.018;camera.position.x+=Math.sin(frame*.12)*.012}let look=hero.g.position.clone().addScaledVector(facing,4.4).add(new T.Vector3(0,1.65,0));camera.lookAt(look);renderer.render(scene,camera)}let last=0,perfStart=0,perfFrames=0;
 function adaptQuality(ts){
  if(!perfStart)perfStart=ts;perfFrames++;
  if(ts-perfStart<4000)return;
@@ -224,5 +246,5 @@ function adaptQuality(ts){
  else if(measuredFPS>=28&&qualityTier==='HIGH'){renderer.setPixelRatio(Math.min(devicePixelRatio,1.25))}
  perfStart=ts;perfFrames=0;
 }
-function loop(ts){requestAnimationFrame(loop);if(!started||document.hidden||ts-last<33)return;last=ts;adaptQuality(ts);try{update()}catch(error){console.error('GAME LOOP',error);document.querySelector('#loading')?.replaceChildren('Error de simulación: '+error.message);started=false;document.querySelector('#intro')?.remove();let d=document.createElement('div');d.style.cssText='position:fixed;top:38%;left:7%;width:86%;background:#300;color:white;padding:20px;border-radius:12px;z-index:30';d.textContent='Error en el juego: '+error.message;document.body.append(d)}}requestAnimationFrame(loop);document.querySelector('#start').onclick=()=>{initAudio();document.querySelector('#intro').remove();started=true;hero.target.copy(heroTarget);say('RADIO • SEGURIDAD','Bienvenido al turno de noche. No confíes en todos los clientes.');camera.position.set(-6,4,13)};
+function loop(ts){requestAnimationFrame(loop);if(!started||document.hidden||ts-last<33)return;last=ts;adaptQuality(ts);try{update()}catch(error){console.error('GAME LOOP',error);document.querySelector('#loading')?.replaceChildren('Error de simulación: '+error.message);started=false;document.querySelector('#intro')?.remove();let d=document.createElement('div');d.style.cssText='position:fixed;top:38%;left:7%;width:86%;background:#300;color:white;padding:20px;border-radius:12px;z-index:30';d.textContent='Error en el juego: '+error.message;document.body.append(d)}}requestAnimationFrame(loop);document.querySelector('#start').onclick=()=>{initAudio();pumpAssets();document.querySelector('#intro').remove();started=true;hero.target.copy(heroTarget);say('RADIO • SEGURIDAD','Bienvenido al turno de noche. No confíes en todos los clientes.');camera.position.set(-6,4,13)};
 if(new URLSearchParams(location.search).get('autotest')==='1'){setTimeout(()=>document.querySelector('#start')?.click(),120)}addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)})</script></body></html>
