@@ -36,6 +36,18 @@ function prepExternal(root){
  root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.roughness=Math.min(1,(o.material.roughness??.75)+.08);o.material.needsUpdate=true}}});
  return root;
 }
+const assetHeights={
+ 'stocked grocery aisles':2.15,'checkout service':1.35,'open chillers':2.35,'chest freezers':1.02,
+ 'high-detail fruit displays':1.25,'cold-chain stockroom':2.45,'self checkout bank':1.42,'basket stacks':.92
+};
+function normalizedScale(root,label,mult=1){
+ const b=new T.Box3().setFromObject(root),size=new T.Vector3();b.getSize(size);
+ const wanted=assetHeights[label]||2;return (wanted/Math.max(size.y,.01))*mult;
+}
+function placeExternal(root,p,label){
+ const sc=normalizedScale(root,label,p[4]||1);root.scale.setScalar(sc);root.rotation.y=p[3]||0;
+ const b=new T.Box3().setFromObject(root);root.position.set(p[0],(p[1]||0)-b.min.y,p[2]);return root;
+}
 function loadExternal(url,placements,label){assetQueue.push({url,placements,label})}
 function loadLocalProp(url,placements){
  gltfLoader.load(url,g=>{
@@ -48,7 +60,7 @@ function pumpAssets(){
  assetPumpActive=true;const job=assetQueue.shift();
  gltfLoader.load(job.url,gltf=>{
    const base=prepExternal(gltf.scene);
-   job.placements.forEach((p,i)=>{const root=i===0?base:base.clone(true);root.position.set(p[0],p[1]||0,p[2]);root.rotation.y=p[3]||0;const sc=p[4]||1;root.scale.setScalar(sc);externalAssets.add(root)});
+   job.placements.forEach((p,i)=>{const root=i===0?base:base.clone(true);placeExternal(root,p,job.label);externalAssets.add(root)});
    externalLoaded++;
    if(job.label==='stocked grocery aisles'&&fallbackAisles)fallbackAisles.visible=false;
    if((job.label==='checkout service'||job.label==='self checkout bank')&&fallbackCheckout)fallbackCheckout.visible=false;
