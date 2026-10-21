@@ -50,8 +50,8 @@ function pumpAssets(){
    const el=document.querySelector('#loading');if(el)el.textContent='Assets 3D cargados: '+externalLoaded+'/'+EXTERNAL_TOTAL;
    assetPumpActive=false;setTimeout(pumpAssets,90);
  },undefined,err=>{externalFailed++;console.warn('Asset externo falló',job.label,err);assetPumpActive=false;setTimeout(pumpAssets,120)});
-}scene.background=new T.Color(0x080f1b);scene.fog=new T.FogExp2(0x080f1b,.023);const camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.1,100);const renderer=new T.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
-const keyLight=new T.DirectionalLight(0xcfe5ff,1.25);keyLight.position.set(-7,11,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);keyLight.shadow.camera.left=-18;keyLight.shadow.camera.right=18;keyLight.shadow.camera.top=22;keyLight.shadow.camera.bottom=-22;scene.add(keyLight);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;document.body.prepend(renderer.domElement);const hemi=new T.HemisphereLight(0xa8caff,0x343c59,1.6);scene.add(hemi);const lights=[];
+}scene.background=new T.Color(0x07101a);scene.fog=new T.FogExp2(0x07101a,.011);const camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.1,100);const renderer=new T.WebGLRenderer({antialias:false,powerPreference:'high-performance',precision:'mediump'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+const keyLight=new T.DirectionalLight(0xcfe5ff,1.25);keyLight.position.set(-7,11,7);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);keyLight.shadow.camera.left=-18;keyLight.shadow.camera.right=18;keyLight.shadow.camera.top=22;keyLight.shadow.camera.bottom=-22;scene.add(keyLight);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;document.body.prepend(renderer.domElement);const hemi=new T.HemisphereLight(0xcbe2ff,0x29334a,2.15);scene.add(hemi);const lights=[];
 const material=(c,r=.8,m=0)=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m});
 function proceduralTexture(kind){
  const cv=document.createElement('canvas');cv.width=cv.height=96;const ctx=cv.getContext('2d');
@@ -100,7 +100,9 @@ loadExternal('https://cdn.3dassets.dev/assets/26766/v1/model.glb',[
 ],'self checkout bank');
 loadExternal('https://cdn.3dassets.dev/assets/26774/v1/model.glb',[
  [-9.6,0,13.4,0,1],[8.8,0,12.8,Math.PI,1]
-],'basket stacks');function box(parent,w,h,d,mat,x,y,z){const a=new T.Mesh(new T.BoxGeometry(w,h,d),mat);a.position.set(x,y,z);a.castShadow=true;a.receiveShadow=true;parent.add(a);return a}function bulb(x,y,z,color,intensity,range){let l=new T.PointLight(color,intensity,range,2);l.position.set(x,y,z);scene.add(l);lights.push(l);return l}box(group,23,.35,36,m.floor,0,-.2,0);box(group,23,7,.4,m.wall,0,3.2,-18);box(group,.4,7,36,m.wall,-11.5,3.2,0);box(group,.4,7,36,m.wall,11.5,3.2,0);box(group,23,.35,36,m.trim,0,6.7,0);for(let z=-17;z<18;z+=3){box(group,23,.022,.035,m.metal,0,.02,z)}for(let x=-11;x<12;x+=3)box(group,.025,.022,36,m.metal,x,.02,0);for(let z=-14;z<17;z+=9){box(group,14,.18,.3,m.white,0,6.25,z);bulb(0,5.8,z,0xffebca,13,20)}// Decorative architecture and atmospheric props
+],'basket stacks');function box(parent,w,h,d,mat,x,y,z){const a=new T.Mesh(new T.BoxGeometry(w,h,d),mat);a.position.set(x,y,z);a.castShadow=true;a.receiveShadow=true;parent.add(a);return a}function bulb(x,y,z,color,intensity,range){let l=new T.PointLight(color,intensity,range,2);l.position.set(x,y,z);scene.add(l);lights.push(l);return l}box(group,23,.35,36,m.floor,0,-.2,0);box(group,23,7,.4,m.wall,0,3.2,-18);box(group,.4,7,36,m.wall,-11.5,3.2,0);box(group,.4,7,36,m.wall,11.5,3.2,0);box(group,23,.35,36,m.trim,0,6.7,0);for(let z=-17;z<18;z+=3){box(group,23,.022,.035,m.metal,0,.02,z)}for(let x=-11;x<12;x+=3)box(group,.025,.022,36,m.metal,x,.02,0);for(let z=-14;z<17;z+=6){box(group,17,.12,.28,m.white,0,6.18,z);bulb(-4.5,5.7,z,0xfff1d0,10,12);bulb(4.5,5.7,z,0xfff1d0,10,12)}
+const entranceGlow=new T.PointLight(0xbfe8ff,18,15,2);entranceGlow.position.set(0,3.6,15);scene.add(entranceGlow);
+const stockGlow=new T.PointLight(0xffb2a4,10,10,2);stockGlow.position.set(8,3,-14);scene.add(stockGlow);// Decorative architecture and atmospheric props
 const decor=new T.Group();scene.add(decor);
 const glowMat=new T.MeshStandardMaterial({color:0xffca75,emissive:0xffb54a,emissiveIntensity:1.3});
 const coldGlow=new T.MeshStandardMaterial({color:0x91d9ff,emissive:0x3ca5ff,emissiveIntensity:1});
@@ -368,15 +370,19 @@ function adaptQuality(ts){
  else if(measuredFPS>=28&&qualityTier==='HIGH'){renderer.setPixelRatio(Math.min(devicePixelRatio,1.25))}
  perfStart=ts;perfFrames=0;
 }
-function loop(ts){requestAnimationFrame(loop);if(!started||document.hidden||ts-last<33)return;last=ts;adaptQuality(ts);try{update()}catch(error){console.error('GAME LOOP',error);document.querySelector('#loading')?.replaceChildren('Error de simulación: '+error.message);started=false;document.querySelector('#intro')?.remove();let d=document.createElement('div');d.style.cssText='position:fixed;top:38%;left:7%;width:86%;background:#300;color:white;padding:20px;border-radius:12px;z-index:30';d.textContent='Error en el juego: '+error.message;document.body.append(d)}}requestAnimationFrame(loop);document.querySelector('#start').onclick=()=>{initAudio();staffSkins.forEach(fn=>fn());document.querySelector('#intro').remove();started=true;hero.target.copy(heroTarget);say('RADIO • SEGURIDAD','Bienvenido al turno de noche. No confíes en todos los clientes.');camera.position.set(-6,4.8,15)};
+function loop(ts){requestAnimationFrame(loop);if(!started||document.hidden||ts-last<33)return;last=ts;adaptQuality(ts);try{update()}catch(error){console.error('GAME LOOP',error);document.querySelector('#loading')?.replaceChildren('Error de simulación: '+error.message);started=false;document.querySelector('#intro')?.remove();let d=document.createElement('div');d.style.cssText='position:fixed;top:38%;left:7%;width:86%;background:#300;color:white;padding:20px;border-radius:12px;z-index:30';d.textContent='Error en el juego: '+error.message;document.body.append(d)}}requestAnimationFrame(loop);document.querySelector('#start').onclick=()=>{if(document.querySelector('#start').disabled)return;initAudio();staffSkins.forEach(fn=>fn());document.querySelector('#intro').remove();started=true;hero.target.copy(heroTarget);say('RADIO • SEGURIDAD','Bienvenido al turno de noche. No confíes en todos los clientes.');camera.position.set(-6,4.8,15)};
 // Begin loading the real supermarket before the player starts, so the first visible frame is not the fallback blockout.
 pumpAssets();
 const startBtn=document.querySelector('#start');
 let startStatus=null;
+let preloadForced=false;
+setTimeout(()=>{preloadForced=true;refreshStartStatus()},9000);
 function refreshStartStatus(){
- const essentialReady=externalLoaded>=2||externalFailed>=2;
+ const essentialReady=externalLoaded>=2||externalFailed>=2||preloadForced;
+ startBtn.disabled=!essentialReady;
  startBtn.textContent=essentialReady?'▶ COMENZAR TURNO':'CARGANDO SUPERMERCADO 3D…';
- startBtn.style.opacity=essentialReady?'1':'.72';
+ startBtn.style.opacity=essentialReady?'1':'.5';
+ startBtn.style.filter=essentialReady?'none':'grayscale(.35)';
  if(essentialReady&&startStatus){clearInterval(startStatus);startStatus=null}
 }
 refreshStartStatus();startStatus=setInterval(refreshStartStatus,120);
