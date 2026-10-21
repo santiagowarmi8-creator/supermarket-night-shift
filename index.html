@@ -7,6 +7,28 @@ const scene=new T.Scene();
 const externalAssets=new T.Group();scene.add(externalAssets);
 const gltfLoader=new GLTFLoader();
 const assetQueue=[];let assetPumpActive=false;
+const SKIN_BASE='https://hidencod.github.io/tge-assets/packs/blocky-characters/';
+const skinFiles='abcdefghijklmnopqr'.split('').map(c=>'character-'+c+'.glb');
+const skinCache=new Map(),skinPending=new Map();
+function getSkin(file,done){
+ if(skinCache.has(file)){done(skinCache.get(file).clone(true));return}
+ if(skinPending.has(file)){skinPending.get(file).push(done);return}
+ skinPending.set(file,[done]);
+ gltfLoader.load(SKIN_BASE+file,g=>{
+   prepExternal(g.scene);skinCache.set(file,g.scene);
+   const list=skinPending.get(file)||[];skinPending.delete(file);list.forEach(cb=>cb(g.scene.clone(true)));
+ },undefined,()=>{skinPending.delete(file)});
+}
+function attachSkin(p,file){
+ if(!p||p.headless||p.skinRequested)return;p.skinRequested=true;
+ getSkin(file,root=>{
+   const b=new T.Box3().setFromObject(root),size=new T.Vector3();b.getSize(size);
+   const sc=2.62/Math.max(size.y,.01);root.scale.setScalar(sc);
+   const b2=new T.Box3().setFromObject(root);root.position.y-=b2.min.y;
+   root.rotation.y=Math.PI;root.userData.externalSkin=true;p.g.add(root);p.skin=root;
+   (p.baseParts||[]).forEach(x=>{if(x!==p.shadow)x.visible=false});
+ });
+}
 let externalLoaded=0,externalFailed=0;
 const EXTERNAL_TOTAL=8;
 let fallbackAisles=null,fallbackCheckout=null,fallbackCold=null,qualityTier='HIGH',measuredFPS=30;
@@ -150,7 +172,7 @@ if(!headless){
  box(g,.46,.13,.46,m.red,0,2.04,0);box(g,.36,.08,.36,m.black,0,2.12,0);
 }
 if(uniform){box(g,.68,.16,.66,m.neon,0,2.7,0);box(g,.32,.3,.53,m.neon,0,1.56,.26);box(g,.17,.08,.04,m.white,0,1.62,.53)}
-return {g,headless,larm,rarm,lleg,rleg,torso,shadow,state:'enter',target:new T.Vector3(),speed:headless?.033:.05,wait:0}}// Wandering paranormal NPC with its own pursuit / retreat cycle
+const baseParts=[...g.children];return {g,headless,larm,rarm,lleg,rleg,torso,shadow,baseParts,state:'enter',target:new T.Vector3(),speed:headless?.033:.05,wait:0}}// Wandering paranormal NPC with its own pursuit / retreat cycle
 const phantom=character(0x29213c,true);phantom.g.scale.set(1.18,1.3,1.18);phantom.g.position.set(8,0,-15);phantom.g.visible=false;
 const phantomGlow=new T.PointLight(0xff225b,0,8);phantom.g.add(phantomGlow);
 let phantomActive=false,phantomTimer=0,phantomCooldown=900,escapeCount=0;
@@ -178,7 +200,8 @@ let stocked=0,scanned=0,decisions=0;
 const backpack=box(hero.g,.75,.85,.3,m.red,0,1.5,-.4);
 box(hero.g,.18,.85,.12,m.black,-.52,1.6,-.28);box(hero.g,.18,.85,.12,m.black,.52,1.6,-.28);
 const torch=new T.SpotLight(0xfff2cf,45,16,Math.PI/7,.5,1.7);torch.position.set(0,2.1,.45);torch.target.position.set(0,1,6);hero.g.add(torch);hero.g.add(torch.target);
-hero.g.position.set(-6,0,8);const cashier=character(0xe7b04b,false,true);cashier.g.position.set(-6,0,12);cashier.g.rotation.y=Math.PI;const guard=character(0x6277a7,false,true);guard.g.position.set(8,0,13);let clients=[],cash=250,night=1,level=1,served=0,goal=8,frame=0,hp=100,mission=0,mode='stock',heroTarget=new T.Vector3(-6,0,-7),dialogEnd=0,blackout=0,shock=0,started=false,clock=0;
+hero.g.position.set(-6,0,8);const cashier=character(0xe7b04b,false,true);cashier.g.position.set(-6,0,12);cashier.g.rotation.y=Math.PI;const guard=character(0x6277a7,false,true);guard.g.position.set(8,0,13);
+const staffSkins=[()=>attachSkin(hero,'character-a.glb'),()=>attachSkin(cashier,'character-h.glb'),()=>attachSkin(guard,'character-m.glb')];let clients=[],cash=250,night=1,level=1,served=0,goal=8,frame=0,hp=100,mission=0,mode='stock',heroTarget=new T.Vector3(-6,0,-7),dialogEnd=0,blackout=0,shock=0,started=false,clock=0;
 const navNodes=[
  new T.Vector3(-9,0,14),new T.Vector3(-4,0,14),new T.Vector3(1,0,14),new T.Vector3(6,0,14),
  new T.Vector3(-9,0,6),new T.Vector3(-4,0,6),new T.Vector3(1,0,6),new T.Vector3(6,0,6),
@@ -233,7 +256,7 @@ const dialogues=[['RADIO • SEGURIDAD','No abras la puerta roja, aunque escuche
  let headless=Math.random()<Math.min(.17+night*.015,.44);
  let p=character(palette[Math.floor(Math.random()*palette.length)],headless);
  box(p.g,.55,.25,.42,m.metal,.55,1.05,.2);
- p.g.position.set((Math.random()-.5)*2,0,17.2);p.wait=0;p.route=[];p.routeIndex=0;p.state='shop';
+ p.g.position.set((Math.random()-.5)*2,0,17.2);p.wait=0;p.route=[];p.routeIndex=0;p.state='shop';if(!headless)attachSkin(p,skinFiles[Math.floor(Math.random()*skinFiles.length)]);
  const aisleX=[-9,-4,1,6][Math.floor(Math.random()*4)],aisleZ=[-11,-5,2,6][Math.floor(Math.random()*4)];
  setClientDestination(p,aisleX,aisleZ);clients.push(p);
  if(headless)say('RADIO • SEGURIDAD','¡Atención! Entró un cliente sin cabeza. No lo mires demasiado.')
@@ -311,5 +334,5 @@ function adaptQuality(ts){
  else if(measuredFPS>=28&&qualityTier==='HIGH'){renderer.setPixelRatio(Math.min(devicePixelRatio,1.25))}
  perfStart=ts;perfFrames=0;
 }
-function loop(ts){requestAnimationFrame(loop);if(!started||document.hidden||ts-last<33)return;last=ts;adaptQuality(ts);try{update()}catch(error){console.error('GAME LOOP',error);document.querySelector('#loading')?.replaceChildren('Error de simulación: '+error.message);started=false;document.querySelector('#intro')?.remove();let d=document.createElement('div');d.style.cssText='position:fixed;top:38%;left:7%;width:86%;background:#300;color:white;padding:20px;border-radius:12px;z-index:30';d.textContent='Error en el juego: '+error.message;document.body.append(d)}}requestAnimationFrame(loop);document.querySelector('#start').onclick=()=>{initAudio();pumpAssets();document.querySelector('#intro').remove();started=true;hero.target.copy(heroTarget);say('RADIO • SEGURIDAD','Bienvenido al turno de noche. No confíes en todos los clientes.');camera.position.set(-6,4,13)};
+function loop(ts){requestAnimationFrame(loop);if(!started||document.hidden||ts-last<33)return;last=ts;adaptQuality(ts);try{update()}catch(error){console.error('GAME LOOP',error);document.querySelector('#loading')?.replaceChildren('Error de simulación: '+error.message);started=false;document.querySelector('#intro')?.remove();let d=document.createElement('div');d.style.cssText='position:fixed;top:38%;left:7%;width:86%;background:#300;color:white;padding:20px;border-radius:12px;z-index:30';d.textContent='Error en el juego: '+error.message;document.body.append(d)}}requestAnimationFrame(loop);document.querySelector('#start').onclick=()=>{initAudio();staffSkins.forEach(fn=>fn());pumpAssets();document.querySelector('#intro').remove();started=true;hero.target.copy(heroTarget);say('RADIO • SEGURIDAD','Bienvenido al turno de noche. No confíes en todos los clientes.');camera.position.set(-6,4,13)};
 if(new URLSearchParams(location.search).get('autotest')==='1'){setTimeout(()=>document.querySelector('#start')?.click(),120)}addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)})</script></body></html>
