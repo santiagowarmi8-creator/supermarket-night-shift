@@ -37,6 +37,12 @@ function prepExternal(root){
  return root;
 }
 function loadExternal(url,placements,label){assetQueue.push({url,placements,label})}
+function loadLocalProp(url,placements){
+ gltfLoader.load(url,g=>{
+   const base=prepExternal(g.scene);
+   placements.forEach((p,i)=>{const root=i===0?base:base.clone(true);root.position.set(p[0],p[1]||0,p[2]);root.rotation.y=p[3]||0;const sc=p[4]||1;root.scale.setScalar(sc);externalAssets.add(root)});
+ },undefined,err=>console.warn('Prop local no cargó',url,err));
+}
 function pumpAssets(){
  if(assetPumpActive||!assetQueue.length)return;
  assetPumpActive=true;const job=assetQueue.shift();
@@ -75,6 +81,11 @@ m.floor.map=tileTex;m.wall.map=wallTex;m.wood.map=woodTex;const group=new T.Grou
 fallbackAisles=new T.Group();group.add(fallbackAisles);
 fallbackCheckout=new T.Group();group.add(fallbackCheckout);
 fallbackCold=new T.Group();group.add(fallbackCold);
+loadLocalProp('./assets/props/fridge-large.glb',[[-10.3,0,-12.8,Math.PI/2,1.15],[-10.3,0,-9.9,Math.PI/2,1.15]]);
+loadLocalProp('./assets/props/fridge-small.glb',[[10.3,0,-11.5,-Math.PI/2,1.12],[10.3,0,-8.7,-Math.PI/2,1.12]]);
+loadLocalProp('./assets/props/carton.glb',[[7.8,0,-15.2,0,1.15],[8.8,0,-15.1,.4,1],[6.9,0,-14.8,-.25,.95]]);
+loadLocalProp('./assets/props/crate.glb',[[-8.9,0,13.6,0,1.05],[-7.9,0,13.3,.25,.95],[8.5,0,13.5,-.2,1.05]]);
+
 // CC0 external supermarket kit. These augment the procedural fallback scene.
 loadExternal('https://cdn.3dassets.dev/assets/26952/v1/model.glb',[
  [-7.2,0,-8.6,0,.98],[-1.9,0,-8.6,0,.98],[3.4,0,-8.6,0,.98],[8.7,0,-8.6,0,.98]
