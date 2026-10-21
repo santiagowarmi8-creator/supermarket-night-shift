@@ -239,7 +239,7 @@ const dialogues=[['RADIO • SEGURIDAD','No abras la puerta roja, aunque escuche
  if(headless)say('RADIO • SEGURIDAD','¡Atención! Entró un cliente sin cabeza. No lo mires demasiado.')
 }function move(p,dt=1){
  let dx=p.target.x-p.g.position.x,dz=p.target.z-p.g.position.z;
- if(p!==hero&&p!==phantom&&clients?.length){
+ if(p!==hero&&p!==phantom&&p.state!=='queue'&&clients?.length){
    let sx=0,sz=0;
    for(const o of clients){if(o===p||o.done)continue;const ox=p.g.position.x-o.g.position.x,oz=p.g.position.z-o.g.position.z,od=Math.hypot(ox,oz);if(od>0&&od<.85){sx+=ox/od*(.85-od)*.45;sz+=oz/od*(.85-od)*.45}}
    dx+=sx;dz+=sz;
