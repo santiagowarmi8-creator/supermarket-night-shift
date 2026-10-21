@@ -195,7 +195,11 @@ heroCrate.visible=true;
 const scanner=new T.Group();hero.g.add(scanner);
 box(scanner,.16,.28,.14,m.black,.52,1.55,.3);box(scanner,.1,.07,.08,signBlue,.52,1.72,.34);
 scanner.visible=false;
-let stocked=0,scanned=0,decisions=0;
+const mop=new T.Group();hero.g.add(mop);box(mop,.07,1.6,.07,m.metal,.52,1.05,.12);box(mop,.72,.1,.24,m.white,.52,.25,.2);mop.visible=false;
+const tablet=new T.Group();hero.g.add(tablet);box(tablet,.52,.68,.08,m.black,.45,1.55,.3);box(tablet,.42,.54,.03,signBlue,.45,1.55,.35);tablet.visible=false;
+const spillMat=new T.MeshBasicMaterial({color:0x5fc6e8,transparent:true,opacity:.32,depthWrite:false});
+const spill=new T.Mesh(new T.CircleGeometry(1.05,24),spillMat);spill.rotation.x=-Math.PI/2;spill.position.set(-1,.02,6);scene.add(spill);
+let stocked=0,scanned=0,decisions=0,cleaned=0,cameraChecks=0,freezerChecks=0;
 
 const backpack=box(hero.g,.75,.85,.3,m.red,0,1.5,-.4);
 box(hero.g,.18,.85,.12,m.black,-.52,1.6,-.28);box(hero.g,.18,.85,.12,m.black,.52,1.6,-.28);
@@ -296,26 +300,44 @@ return false}p.larm.rotation.x*=.8;p.rarm.rotation.x*=.8;p.lleg.rotation.x*=.8;p
    return;
  }
  if(p.state==='leave'){p.done=true;scene.remove(p.g)}
-}function heroAI(){
+}function chooseNextJob(){
+ if(spill.visible){mode='clean';setHeroDestination(-1,6);say('PROTAGONISTA • IA','Hay un derrame en el pasillo. Voy a limpiarlo.');return}
+ const jobs=['stock','security','freezer','investigate','patrol'];const job=jobs[Math.floor(Math.random()*jobs.length)];
+ mode=job;
+ if(job==='stock')setHeroDestination([-7,-2,3][Math.floor(Math.random()*3)],-10+Math.random()*12);
+ else if(job==='security')setHeroDestination(8,13);
+ else if(job==='freezer')setHeroDestination(6,-13);
+ else if(job==='investigate')setHeroDestination(8,-14);
+ else setHeroDestination(7,8);
+}
+function heroAI(){
 const action=document.querySelector('#action');
-heroCrate.visible=mode==='stock';scanner.visible=mode==='cash';
+heroCrate.visible=mode==='stock';scanner.visible=mode==='cash';mop.visible=mode==='clean';tablet.visible=mode==='security';torch.visible=mode==='investigate'||mode==='freezer'||mode==='escape';
 if(mode==='escape')action.textContent='🏃 IA: HUYENDO DE LA ENTIDAD';
 else if(mode==='stock')action.textContent='📦 IA: REPONIENDO PRODUCTOS • '+stocked;
 else if(mode==='cash')action.textContent='🧾 IA: COBRANDO CLIENTES • '+scanned;
 else if(mode==='investigate')action.textContent='🔦 IA: INVESTIGANDO RUIDOS';
+else if(mode==='clean')action.textContent='🧹 IA: LIMPIANDO DERRAME • '+cleaned;
+else if(mode==='security')action.textContent='📹 IA: REVISANDO CÁMARAS • '+cameraChecks;
+else if(mode==='freezer')action.textContent='❄️ IA: REVISANDO CONGELADORES • '+freezerChecks;
 else action.textContent='👀 IA: PATRULLANDO EL SUPERMERCADO';
 if(move(hero)){if(advanceHeroRoute()){hero.target.copy(heroTarget);return}clock++;
 if(clock>70){clock=0;decisions++;
 if(mode==='escape'){setHeroDestination(0,14)}
 else if(mode==='stock'){stocked+=3+Math.floor(Math.random()*4);cash+=8;mode='cash';setHeroDestination(-6,9);say('PROTAGONISTA • IA','Listo. Reposición terminada. Voy a caja.')}
-else if(mode==='cash'){let waiting=clients.filter(c=>c.state==='queue').length;if(waiting>0){setHeroDestination(-6,9);say('PROTAGONISTA • IA','Hay '+waiting+' clientes esperando. Sigo cobrando.')}else{mode='investigate';setHeroDestination(8,-14);say('PROTAGONISTA • IA','Caja despejada. Escuché golpes en el almacén.')}}
-else if(mode==='investigate'){mode='patrol';setHeroDestination(7,8);say('PROTAGONISTA • IA','La puerta estaba cerrada... pero había pasos adentro.')}
-else{mode='stock';setHeroDestination([-7,-2,3][Math.floor(Math.random()*3)],-10+Math.random()*12);say('PROTAGONISTA • IA','Inventario bajo. Voy a reponer otro pasillo.')}}}
+else if(mode==='cash'){let waiting=clients.filter(c=>c.state==='queue').length;if(waiting>0){setHeroDestination(-6,9);say('PROTAGONISTA • IA','Hay '+waiting+' clientes esperando. Sigo cobrando.')}else{chooseNextJob()}}
+else if(mode==='investigate'){say('PROTAGONISTA • IA','La puerta estaba cerrada... pero había pasos adentro.');chooseNextJob()}
+else if(mode==='clean'){cleaned++;spill.visible=false;cash+=18;say('PROTAGONISTA • IA','Derrame limpio. El pasillo vuelve a estar seguro.');chooseNextJob()}
+else if(mode==='security'){cameraChecks++;say('PROTAGONISTA • IA','Cámaras revisadas. Vi movimiento cerca del congelador.');chooseNextJob()}
+else if(mode==='freezer'){freezerChecks++;cash+=10;say('PROTAGONISTA • IA','Temperatura estable... aunque escuché golpes dentro.');chooseNextJob()}
+else{chooseNextJob()}}}
 hero.target.copy(heroTarget);
 const anim=Math.sin(frame*.18);
 if(mode==='stock'){hero.larm.rotation.x=-.72+anim*.16;hero.rarm.rotation.x=-.72-anim*.16;hero.torso.rotation.x=-.04;heroCrate.rotation.y=anim*.025}
 else if(mode==='cash'){hero.rarm.rotation.x=-.72+anim*.5;hero.larm.rotation.x=-.2;scanner.rotation.z=anim*.08;hero.torso.rotation.x=-.02}
-else if(mode==='investigate'){hero.rarm.rotation.x=-.35;hero.larm.rotation.x=.15;hero.torso.rotation.x=-.08}
+else if(mode==='investigate'||mode==='freezer'){hero.rarm.rotation.x=-.35;hero.larm.rotation.x=.15;hero.torso.rotation.x=-.08}
+else if(mode==='clean'){hero.rarm.rotation.x=-.8+anim*.38;hero.larm.rotation.x=-.3-anim*.18;hero.torso.rotation.x=.05;mop.rotation.z=anim*.12}
+else if(mode==='security'){hero.rarm.rotation.x=-.55;hero.larm.rotation.x=-.55;hero.torso.rotation.x=-.03;tablet.rotation.z=anim*.025}
 else if(mode==='escape'){hero.larm.rotation.x=anim*.95;hero.rarm.rotation.x=-anim*.95;hero.torso.rotation.x=-.14}
 else{hero.torso.rotation.x*=.82}
 if(hero.skin){
@@ -328,8 +350,8 @@ const moving=hero.g.position.distanceTo(hero.target)>.2;
 let walk=Math.sin(frame*.22)*(moving?.035:0);hero.g.position.y=walk;hero.g.rotation.z=Math.sin(frame*.11)*.008;
 if(moving&&frame-lastFoot>13){lastFoot=frame;footstep()}}function update(){frame++;
 const queuedNow=clients.filter(c=>c.state==='queue').length,shoppingNow=clients.filter(c=>c.state==='shop').length;
-window.__GAME_DIAG__={started,frame,cash,night,level,served,hp,mode,clients:clients.length,queued:queuedNow,shopping:shoppingNow,phantomActive,externalLoaded,externalFailed,qualityTier,measuredFPS};
-if(frame%150===0&&clients.length<9&&queuedNow<4)spawn();
+window.__GAME_DIAG__={started,frame,cash,night,level,served,hp,mode,clients:clients.length,queued:queuedNow,shopping:shoppingNow,cleaned,cameraChecks,freezerChecks,phantomActive,externalLoaded,externalFailed,qualityTier,measuredFPS};
+if(frame%150===0&&clients.length<9&&queuedNow<4)spawn();if(frame%2300===0&&!spill.visible)spill.visible=true;
 if(frame%900===0&&queuedNow<3){for(let i=0;i<Math.min(2,level)&&clients.length<9;i++)spawn()}
 if(queuedNow>=2&&!phantomActive&&mode!=='cash'){mode='cash';setHeroDestination(-6,9);say('PROTAGONISTA • IA','La fila está creciendo. Vuelvo a caja ahora mismo.')}clients.forEach(updateClient);clients=clients.filter(p=>!p.done);heroAI();paranormalAI();atmosphere();drawMiniMap();animateCheckout();guard.g.rotation.y=Math.sin(frame*.01)*.8;cashier.larm.rotation.x=Math.sin(frame*.05)*.2;
 if(cashier.skin){cashier.skin.rotation.z=Math.sin(frame*.035)*.008}
