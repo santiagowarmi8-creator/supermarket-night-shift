@@ -176,9 +176,15 @@ const navNodes=[
 let heroRoute=[],routeIndex=0;
 function nearestNav(v){let best=navNodes[0],bd=1e9;for(const n of navNodes){const d=Math.hypot(v.x-n.x,v.z-n.z);if(d<bd){bd=d;best=n}}return best}
 function buildRoute(from,to){
- const start=nearestNav(from),end=nearestNav(to),route=[];
- if(Math.abs(start.z-end.z)>1){route.push(start.clone());route.push(new T.Vector3(start.x,0,end.z))}
- route.push(end.clone());route.push(to.clone());
+ const start=nearestNav(from),end=nearestNav(to),route=[start.clone()];
+ const changingAisle=Math.abs(start.x-end.x)>1.5;
+ if(changingAisle){
+   const safeZ=(Math.abs(start.z-14)<Math.abs(start.z+14))?14:-14;
+   route.push(new T.Vector3(start.x,0,safeZ));
+   route.push(new T.Vector3(end.x,0,safeZ));
+ }
+ if(Math.abs((route[route.length-1]?.z??start.z)-end.z)>.5)route.push(end.clone());
+ route.push(to.clone());
  return route;
 }
 function setHeroDestination(x,z){const final=new T.Vector3(x,0,z);heroRoute=buildRoute(hero.g.position,final);routeIndex=0;heroTarget.copy(heroRoute[0]||final)}
@@ -219,7 +225,7 @@ else if(mode==='stock')action.textContent='📦 IA: REPONIENDO PRODUCTOS • '+s
 else if(mode==='cash')action.textContent='🧾 IA: COBRANDO CLIENTES • '+scanned;
 else if(mode==='investigate')action.textContent='🔦 IA: INVESTIGANDO RUIDOS';
 else action.textContent='👀 IA: PATRULLANDO EL SUPERMERCADO';
-if(move(hero)){if(advanceHeroRoute())return;clock++;
+if(move(hero)){if(advanceHeroRoute()){hero.target.copy(heroTarget);return}clock++;
 if(clock>70){clock=0;decisions++;
 if(mode==='escape'){setHeroDestination(0,14)}
 else if(mode==='stock'){stocked+=3+Math.floor(Math.random()*4);cash+=8;mode='cash';setHeroDestination(-6,9);say('PROTAGONISTA • IA','Listo. Reposición terminada. Voy a caja.')}
