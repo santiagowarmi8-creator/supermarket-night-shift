@@ -51,16 +51,16 @@ function placeExternal(root,p,label){
 function loadExternal(url,placements,label){assetQueue.push({url,placements,label})}
 function loadLocalProp(url,placements){
  gltfLoader.load(url,g=>{
-   const base=prepExternal(g.scene);
-   placements.forEach((p,i)=>{const root=i===0?base:base.clone(true);root.position.set(p[0],p[1]||0,p[2]);root.rotation.y=p[3]||0;const sc=p[4]||1;root.scale.setScalar(sc);externalAssets.add(root)});
+   const source=prepExternal(g.scene);
+   placements.forEach(p=>{const root=source.clone(true);root.position.set(p[0],p[1]||0,p[2]);root.rotation.y=p[3]||0;const sc=p[4]||1;root.scale.setScalar(sc);externalAssets.add(root)});
  },undefined,err=>console.warn('Prop local no cargó',url,err));
 }
 function pumpAssets(){
  if(assetPumpActive||!assetQueue.length)return;
  assetPumpActive=true;const job=assetQueue.shift();
  gltfLoader.load(job.url,gltf=>{
-   const base=prepExternal(gltf.scene);
-   job.placements.forEach((p,i)=>{const root=i===0?base:base.clone(true);placeExternal(root,p,job.label);externalAssets.add(root)});
+   const source=prepExternal(gltf.scene);
+   job.placements.forEach(p=>{const root=source.clone(true);placeExternal(root,p,job.label);externalAssets.add(root)});
    externalLoaded++;
    if(job.label==='stocked grocery aisles'&&fallbackAisles)fallbackAisles.visible=false;
    if((job.label==='checkout service'||job.label==='self checkout bank')&&fallbackCheckout)fallbackCheckout.visible=false;
