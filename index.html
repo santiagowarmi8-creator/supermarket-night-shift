@@ -370,10 +370,12 @@ function loop(ts){requestAnimationFrame(loop);if(!started||document.hidden||ts-l
 // Begin loading the real supermarket before the player starts, so the first visible frame is not the fallback blockout.
 pumpAssets();
 const startBtn=document.querySelector('#start');
-const startStatus=setInterval(()=>{
+let startStatus=null;
+function refreshStartStatus(){
  const essentialReady=externalLoaded>=2||externalFailed>=2;
  startBtn.textContent=essentialReady?'▶ COMENZAR TURNO':'CARGANDO SUPERMERCADO 3D…';
  startBtn.style.opacity=essentialReady?'1':'.72';
- if(essentialReady)clearInterval(startStatus);
-},120);
+ if(essentialReady&&startStatus){clearInterval(startStatus);startStatus=null}
+}
+refreshStartStatus();startStatus=setInterval(refreshStartStatus,120);
 if(new URLSearchParams(location.search).get('autotest')==='1'){setTimeout(()=>document.querySelector('#start')?.click(),120)}addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)})</script></body></html>
