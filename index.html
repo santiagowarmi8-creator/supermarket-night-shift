@@ -107,7 +107,7 @@ productPositions.forEach((positions,i)=>{const inst=new T.InstancedMesh(productG
 const checkoutBelt=box(fallbackCheckout,3.85,.08,1.15,m.black,-6,1.26,10.8);
 const checkoutItems=[];for(let i=0;i<6;i++){const it=box(fallbackCheckout,.38,.28,.38,material(palette[i%palette.length]),-8+i*.68,1.45,10.8+(i%2?-.2:.18));checkoutItems.push(it)}
 const scannerLamp=box(fallbackCheckout,.42,.08,.5,signBlue,-4.18,1.36,10.8);
-function animateCheckout(){const active=mode==='cash'&&clients.some(c=>c.state==='checkout');checkoutItems.forEach((it,i)=>{if(active){it.position.x+=.035;if(it.position.x>-4.2)it.position.x=-8.15-(i%2)*.25}it.rotation.y+=active?.025:.003});scannerLamp.scale.y=active?1.8:1}box(fallbackCheckout,1.3,.24,.9,m.black,-6,1.4,10.7);box(fallbackCheckout,1.6,.14,.8,m.glass,-6,1.78,10.7);box(fallbackCheckout,5,.25,.35,m.neon,-6,1.25,12.15);box(fallbackCheckout,5,.18,.7,m.trim,6,1,13);box(fallbackCold,4.5,4.7,.3,m.metal,0,2.35,17.6);box(fallbackCold,3.8,4.2,.13,m.glass,0,2.2,17.4);box(fallbackCold,.2,4.3,.2,m.white,0,2.1,17.3);const redDoor=box(group,2.8,4,.4,m.red,8.7,2,-17.5);box(group,2.4,.2,.4,m.neon,8.7,4.15,-17.5);bulb(8.6,4.3,-16,0xff3658,23,12);for(let x of [-10,10])for(let z of [-16,16])box(group,.4,6,.4,m.trim,x,3,z);
+function animateCheckout(){const active=mode==='cash'&&clients.some(c=>c.state==='queue');checkoutItems.forEach((it,i)=>{if(active){it.position.x+=.035;if(it.position.x>-4.2)it.position.x=-8.15-(i%2)*.25}it.rotation.y+=active?.025:.003});scannerLamp.scale.y=active?1.8:1}box(fallbackCheckout,1.3,.24,.9,m.black,-6,1.4,10.7);box(fallbackCheckout,1.6,.14,.8,m.glass,-6,1.78,10.7);box(fallbackCheckout,5,.25,.35,m.neon,-6,1.25,12.15);box(fallbackCheckout,5,.18,.7,m.trim,6,1,13);box(fallbackCold,4.5,4.7,.3,m.metal,0,2.35,17.6);box(fallbackCold,3.8,4.2,.13,m.glass,0,2.2,17.4);box(fallbackCold,.2,4.3,.2,m.white,0,2.1,17.3);const redDoor=box(group,2.8,4,.4,m.red,8.7,2,-17.5);box(group,2.4,.2,.4,m.neon,8.7,4.15,-17.5);bulb(8.6,4.3,-16,0xff3658,23,12);for(let x of [-10,10])for(let z of [-16,16])box(group,.4,6,.4,m.trim,x,3,z);
 // Low-cost procedural environment effects: sparks, rain on windows and emergency beacons
 // Emergency exit markers and aisle labels
 const aisleColors=[0x8fd1ff,0xffcf85,0xb3efbf,0xffa3b7];
@@ -189,6 +189,8 @@ function buildRoute(from,to){
 }
 function setHeroDestination(x,z){const final=new T.Vector3(x,0,z);heroRoute=buildRoute(hero.g.position,final);routeIndex=0;heroTarget.copy(heroRoute[0]||final)}
 function advanceHeroRoute(){if(!heroRoute.length)return false;if(hero.g.position.distanceTo(heroTarget)<.24){routeIndex++;if(routeIndex<heroRoute.length){heroTarget.copy(heroRoute[routeIndex]);return true}else{heroRoute=[];return false}}return true}
+function setClientDestination(p,x,z){const final=new T.Vector3(x,0,z);p.route=buildRoute(p.g.position,final);p.routeIndex=0;p.target.copy(p.route[0]||final)}
+function advanceClientRoute(p){if(!p.route?.length)return false;if(p.g.position.distanceTo(p.target)<.24){p.routeIndex++;if(p.routeIndex<p.route.length){p.target.copy(p.route[p.routeIndex]);return true}else{p.route=[];return false}}return true}
 let audioCtx=null,masterGain=null,lastFoot=0;
 function initAudio(){if(audioCtx)return;audioCtx=new (window.AudioContext||window.webkitAudioContext)();masterGain=audioCtx.createGain();masterGain.gain.value=.18;masterGain.connect(audioCtx.destination);const hum=audioCtx.createOscillator(),hg=audioCtx.createGain();hum.type='sine';hum.frequency.value=54;hg.gain.value=.025;hum.connect(hg);hg.connect(masterGain);hum.start()}
 function tone(freq=440,duration=.08,type='square',gain=.08){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(gain,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.connect(g);g.connect(masterGain);o.start();o.stop(audioCtx.currentTime+duration)}
@@ -214,10 +216,42 @@ const dialogueExtra=[
 ['PROTAGONISTA • IA','Esto no estaba aquí hace un minuto.'],
 ['CAJERA','Hay alguien llamando desde dentro del congelador.']
 ];
-const dialogues=[['RADIO • SEGURIDAD','No abras la puerta roja, aunque escuches tu nombre.'],['CLIENTE DESCONOCIDO','¿Tienen algo para recuperar mi cabeza?'],['RADIO • SEGURIDAD','La cámara tres muestra a alguien detrás de ti.'],['GERENTE','Aquí nadie renuncia. Nadie sale.'],['CAJERA','Acabo de cobrarle a alguien que no tenía rostro.'],['SISTEMA','Advertencia: cliente no registrado.'],['RADIO • SEGURIDAD','El pasillo cuatro no existía ayer.'],['CLIENTE','Por favor, no apagues las luces...']];function say(name,text){document.querySelector('#speaker').textContent=name;document.querySelector('#speech').textContent=text;document.querySelector('#dialog').classList.add('on');dialogEnd=frame+190}function spawn(){let headless=Math.random()<Math.min(.17+night*.015,.44);let p=character(palette[Math.floor(Math.random()*palette.length)],headless);box(p.g,.55,.25,.42,m.metal,.55,1.05,.2);p.g.position.set((Math.random()-.5)*3,0,18);p.target.set([-7,-2,3,8][Math.floor(Math.random()*4)],0,[-12,-5,2][Math.floor(Math.random()*3)]);p.wait=0;clients.push(p);if(headless)say('RADIO • SEGURIDAD','¡Atención! Entró un cliente sin cabeza. No lo mires demasiado.')}function move(p,dt=1){let dx=p.target.x-p.g.position.x,dz=p.target.z-p.g.position.z,d=Math.hypot(dx,dz);if(d>.12){p.g.position.x+=dx/d*p.speed*dt;p.g.position.z+=dz/d*p.speed*dt;p.g.rotation.y=Math.atan2(dx,dz);let s=Math.sin(frame*.19);p.larm.rotation.x=s*.55;p.rarm.rotation.x=-s*.55;p.lleg.rotation.x=-s*.5;p.rleg.rotation.x=s*.5;return false}p.larm.rotation.x*=.8;p.rarm.rotation.x*=.8;p.lleg.rotation.x*=.8;p.rleg.rotation.x*=.8;return true}function updateClient(p){if(move(p)){if(p.state==='checkout'){let heroAtRegister=hero.g.position.distanceTo(new T.Vector3(-6,0,9))<3.4;p.wait+=heroAtRegister?2.7:.2}else p.wait++;
-if(p.state==='enter'&&p.wait>60){p.state='checkout';p.target.set(-5.5+Math.random()*1.5,0,9);p.wait=0}
-else if(p.state==='checkout'&&p.wait>90){p.state='leave';p.target.set(0,0,20);p.wait=0;cash+=p.headless?83:15+Math.floor(Math.random()*35);served++;scanned++;scannerBeep();if(p.headless)say('CAJERA','Dejó dinero mojado y desapareció sin decir nada.')}
-else if(p.state==='leave'){p.done=true;scene.remove(p.g)}}}function heroAI(){
+const dialogues=[['RADIO • SEGURIDAD','No abras la puerta roja, aunque escuches tu nombre.'],['CLIENTE DESCONOCIDO','¿Tienen algo para recuperar mi cabeza?'],['RADIO • SEGURIDAD','La cámara tres muestra a alguien detrás de ti.'],['GERENTE','Aquí nadie renuncia. Nadie sale.'],['CAJERA','Acabo de cobrarle a alguien que no tenía rostro.'],['SISTEMA','Advertencia: cliente no registrado.'],['RADIO • SEGURIDAD','El pasillo cuatro no existía ayer.'],['CLIENTE','Por favor, no apagues las luces...']];function say(name,text){document.querySelector('#speaker').textContent=name;document.querySelector('#speech').textContent=text;document.querySelector('#dialog').classList.add('on');dialogEnd=frame+190}function spawn(){
+ let headless=Math.random()<Math.min(.17+night*.015,.44);
+ let p=character(palette[Math.floor(Math.random()*palette.length)],headless);
+ box(p.g,.55,.25,.42,m.metal,.55,1.05,.2);
+ p.g.position.set((Math.random()-.5)*2,0,17.2);p.wait=0;p.route=[];p.routeIndex=0;p.state='shop';
+ const aisleX=[-9,-4,1,6][Math.floor(Math.random()*4)],aisleZ=[-11,-5,2,6][Math.floor(Math.random()*4)];
+ setClientDestination(p,aisleX,aisleZ);clients.push(p);
+ if(headless)say('RADIO • SEGURIDAD','¡Atención! Entró un cliente sin cabeza. No lo mires demasiado.')
+}function move(p,dt=1){let dx=p.target.x-p.g.position.x,dz=p.target.z-p.g.position.z,d=Math.hypot(dx,dz);if(d>.12){p.g.position.x+=dx/d*p.speed*dt;p.g.position.z+=dz/d*p.speed*dt;p.g.rotation.y=Math.atan2(dx,dz);let s=Math.sin(frame*.19);p.larm.rotation.x=s*.55;p.rarm.rotation.x=-s*.55;p.lleg.rotation.x=-s*.5;p.rleg.rotation.x=s*.5;return false}p.larm.rotation.x*=.8;p.rarm.rotation.x*=.8;p.lleg.rotation.x*=.8;p.rleg.rotation.x*=.8;return true}function updateClient(p){
+ if(p.state==='queue'){
+   const q=clients.filter(c=>c.state==='queue');const qi=q.indexOf(p);
+   const qx=-4.9,qz=8.7+Math.max(0,qi)*1.05;
+   if(!p.route?.length&&p.g.position.distanceTo(new T.Vector3(qx,0,qz))>.35)setClientDestination(p,qx,qz);
+ }
+ const arrived=move(p);
+ if(!arrived)return;
+ if(advanceClientRoute(p)){return}
+ if(p.state==='shop'){
+   p.wait++;
+   if(p.wait>55+Math.random()*35){p.state='queue';p.wait=0;setClientDestination(p,-4.9,9)}
+   return;
+ }
+ if(p.state==='queue'){
+   const q=clients.filter(c=>c.state==='queue');const first=q[0]===p;
+   const heroAtRegister=hero.g.position.distanceTo(new T.Vector3(-6,0,9))<3.4;
+   if(first&&heroAtRegister){p.wait+=2.7;p.rarm.rotation.x=-.35+Math.sin(frame*.12)*.12}
+   else p.wait+=.05;
+   if(first&&p.wait>90){
+     p.state='leave';p.wait=0;setClientDestination(p,0,18.8);
+     cash+=p.headless?83:15+Math.floor(Math.random()*35);served++;scanned++;scannerBeep();
+     if(p.headless)say('CAJERA','Dejó dinero mojado y desapareció sin decir nada.')
+   }
+   return;
+ }
+ if(p.state==='leave'){p.done=true;scene.remove(p.g)}
+}function heroAI(){
 const action=document.querySelector('#action');
 heroCrate.visible=mode==='stock';scanner.visible=mode==='cash';
 if(mode==='escape')action.textContent='🏃 IA: HUYENDO DE LA ENTIDAD';
@@ -229,7 +263,7 @@ if(move(hero)){if(advanceHeroRoute()){hero.target.copy(heroTarget);return}clock+
 if(clock>70){clock=0;decisions++;
 if(mode==='escape'){setHeroDestination(0,14)}
 else if(mode==='stock'){stocked+=3+Math.floor(Math.random()*4);cash+=8;mode='cash';setHeroDestination(-6,9);say('PROTAGONISTA • IA','Listo. Reposición terminada. Voy a caja.')}
-else if(mode==='cash'){let waiting=clients.filter(c=>c.state==='checkout').length;if(waiting>0){setHeroDestination(-6,9);say('PROTAGONISTA • IA','Hay '+waiting+' clientes esperando. Sigo cobrando.')}else{mode='investigate';setHeroDestination(8,-14);say('PROTAGONISTA • IA','Caja despejada. Escuché golpes en el almacén.')}}
+else if(mode==='cash'){let waiting=clients.filter(c=>c.state==='queue').length;if(waiting>0){setHeroDestination(-6,9);say('PROTAGONISTA • IA','Hay '+waiting+' clientes esperando. Sigo cobrando.')}else{mode='investigate';setHeroDestination(8,-14);say('PROTAGONISTA • IA','Caja despejada. Escuché golpes en el almacén.')}}
 else if(mode==='investigate'){mode='patrol';setHeroDestination(7,8);say('PROTAGONISTA • IA','La puerta estaba cerrada... pero había pasos adentro.')}
 else{mode='stock';setHeroDestination([-7,-2,3][Math.floor(Math.random()*3)],-10+Math.random()*12);say('PROTAGONISTA • IA','Inventario bajo. Voy a reponer otro pasillo.')}}}
 hero.target.copy(heroTarget);
